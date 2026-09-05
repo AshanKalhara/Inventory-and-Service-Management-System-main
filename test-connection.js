@@ -1,7 +1,10 @@
 require('dotenv').config()
 const { Client } = require('pg')
 
-console.log('Using connection string host:', new URL(process.env.DATABASE_URL).host)
+const urlObj = new URL(process.env.DATABASE_URL)
+console.log('Using connection string host:', urlObj.host)
+console.log('Using username:', urlObj.username)
+console.log('Password length:', urlObj.password.length, '| first 3 chars:', urlObj.password.slice(0, 3), '| last 3 chars:', urlObj.password.slice(-3))
 
 const client = new Client({
   connectionString: process.env.DATABASE_URL,
