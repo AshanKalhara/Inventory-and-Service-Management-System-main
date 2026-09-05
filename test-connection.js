@@ -17,5 +17,14 @@ client.connect()
     return client.end()
   })
   .catch((err) => {
-    console.error('FAILED:', err.message)
+    console.error('FAILED - full error object:')
+    console.error(err)
+    console.error('---')
+    console.error('code:', err.code)
+    console.error('message:', JSON.stringify(err.message))
   })
+
+setTimeout(() => {
+  console.error('TIMEOUT: connection attempt did not resolve within 10 seconds')
+  process.exit(1)
+}, 10000)
