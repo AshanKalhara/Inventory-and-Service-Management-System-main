@@ -51,7 +51,7 @@ export default async function Dashboard() {
       <main className="ml-68 my-4 mr-4 min-h-[calc(100vh-2rem)] rounded-3xl border border-border bg-card p-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-foreground">Dashboard is here</h2>
-          <p className="text-muted-foreground">Welcome back — here's what's happening at your shop</p>
+          <p className="text-muted-foreground">Welcome bgvregegack — here's what's happening at your shop</p>
         </div>
 
         {/* Stats Cards */}
