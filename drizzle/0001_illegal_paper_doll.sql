@@ -1,0 +1,1 @@
+ALTER TABLE "bikes" RENAME COLUMN "milage" TO "mileage";

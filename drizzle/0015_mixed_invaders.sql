@@ -1,0 +1,1 @@
+ALTER TABLE "invoice_items" ADD COLUMN "item_type" varchar(20) DEFAULT 'service' NOT NULL;

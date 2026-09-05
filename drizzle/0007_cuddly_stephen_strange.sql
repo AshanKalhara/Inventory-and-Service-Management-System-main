@@ -1,0 +1,1 @@
+ALTER TABLE "parts" RENAME COLUMN "minStock" TO "min_stock";

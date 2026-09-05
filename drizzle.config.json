@@ -1,0 +1,7 @@
+{
+  "schema": "./lib/db/schema.ts",
+  "dialect": "postgresql",
+  "dbCredentials": {
+    "url": "postgresql://postgres:admin123@localhost:5432/bike_service_db?schema=public"
+  }
+}
