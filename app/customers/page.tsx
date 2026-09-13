@@ -264,7 +264,6 @@ export default function CustomersPage() {
 
       allRecords = allRecordsResult
 
-      // Keep the global serviceRecords state fresh too, in case anything changed
       setServiceRecords(allRecords || [])
 
       setViewingProfile({
@@ -290,7 +289,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       const result = await createCustomer(formData)
       if (!result.success) {
   setPermissionError(result.error ?? 'Something went wrong. Please try again.')
-  return// don't close the form or reset fields — let them see the message
+  return
       }
     }
     setFormData({ name: '', email: '', phone: '', address: '' })
