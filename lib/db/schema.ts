@@ -18,6 +18,7 @@ import { relations, sql } from 'drizzle-orm'
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
+  role: varchar('role', {length:20}).notNull().default('user'),
   email: text('email').notNull().unique(),
   emailVerified: boolean('emailVerified').notNull().default(false),
   image: text('image'),
