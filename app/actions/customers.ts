@@ -33,19 +33,26 @@ export async function createCustomer(data: {
   phone?: string
   address?: string
 }) {
-  const currentUser = await requireRole('admin')
-  const result = await db
-    .insert(customers)
-    .values({
-      userId: currentUser.id,
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
-    })
-    .returning()
-  revalidatePath('/customers')
-  return result[0]
+  try {
+    const currentUser = await requireRole('admin')
+    const result = await db
+      .insert(customers)
+      .values({
+        userId: currentUser.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address,
+      })
+      .returning()
+    revalidatePath('/customers')
+    return { success: true, data: result[0] }
+  } catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
 }
 
 export async function updateCustomer(
@@ -57,12 +64,13 @@ export async function updateCustomer(
     address?: string
   }
 ) {
-  const currentUser = await requireRole('admin')
-  const updateData: any = {}
-  if (data.name) updateData.name = data.name
-  if (data.email !== undefined) updateData.email = data.email
-  if (data.phone !== undefined) updateData.phone = data.phone
-  if (data.address !== undefined) updateData.address = data.address
+  try {
+    const currentUser = await requireRole('admin')
+    const updateData: any = {}
+    if (data.name) updateData.name = data.name
+    if (data.email !== undefined) updateData.email = data.email
+    if (data.phone !== undefined) updateData.phone = data.phone
+    if (data.address !== undefined) updateData.address = data.address
   updateData.updatedAt = new Date()
 
   const result = await db
@@ -73,13 +81,28 @@ export async function updateCustomer(
   revalidatePath('/customers')
   return result[0]
 }
+catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
+}
 
 export async function deleteCustomer(customerId: number) {
-  const currentUser = await requireRole('admin')
-  await db
-    .delete(customers)
-    .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
+  try {
+    const currentUser = await requireRole('admin')
+    await db
+      .delete(customers)
+      .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
   revalidatePath('/customers')
+}
+catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
 }
 
 // Bikes

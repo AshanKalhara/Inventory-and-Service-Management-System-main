@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit2, Trash2, Search, Eye, User, Bike, Calendar, Mail, Phone, MapPin, History, Download } from 'lucide-react'
+import { Plus, Edit2, Trash2, Search, Eye, User, Bike, Calendar, Mail, Phone, MapPin, History, Download, AlertTriangle } from 'lucide-react'
 import {
   getCustomers,
   createCustomer,
@@ -23,7 +23,6 @@ import { getServiceNumberMap } from '@/lib/db/service-number'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import React from "react"
-
 export type ServiceRecord = {
   id: number;
   registrationNumber: string;
@@ -175,6 +174,7 @@ export default function CustomersPage() {
   const [viewingProfile, setViewingProfile] = useState<any | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -280,22 +280,28 @@ export default function CustomersPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    try {
-      if (editingId) {
-        await updateCustomer(editingId, formData)
-      } else {
-        await createCustomer(formData)
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setPermissionError(null)
+  try {
+    if (editingId) {
+      await updateCustomer(editingId, formData)
+    } else {
+      const result = await createCustomer(formData)
+      if (!result.success) {
+  setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+  return// don't close the form or reset fields — let them see the message
       }
-      setFormData({ name: '', email: '', phone: '', address: '' })
-      setEditingId(null)
-      setShowForm(false)
-      await loadCustomers()
-    } catch (error) {
-      console.error('Failed to save customer:', error)
     }
+    setFormData({ name: '', email: '', phone: '', address: '' })
+    setEditingId(null)
+    setShowForm(false)
+    await loadCustomers()
+  } catch (error) {
+    console.error('Failed to save customer:', error)
+    setPermissionError('Something went wrong. Please try again.')
   }
+}
 
   const handleBikeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -729,6 +735,12 @@ export default function CustomersPage() {
                   >
                     Cancel
                   </Button>
+                  {permissionError && (
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{permissionError}</span>
+                    </div>
+                  )}
                 </div>
               </form>
             </CardContent>
