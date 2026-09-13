@@ -7,6 +7,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { requireRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -15,6 +16,7 @@ async function getUserId() {
 }
 
 // Customers
+
 export async function getCustomers() {
   const userId = await getUserId()
   const result = await db
@@ -31,11 +33,11 @@ export async function createCustomer(data: {
   phone?: string
   address?: string
 }) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
   const result = await db
     .insert(customers)
     .values({
-      userId,
+      userId: currentUser.id,
       name: data.name,
       email: data.email,
       phone: data.phone,
@@ -55,7 +57,7 @@ export async function updateCustomer(
     address?: string
   }
 ) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
   const updateData: any = {}
   if (data.name) updateData.name = data.name
   if (data.email !== undefined) updateData.email = data.email
@@ -66,21 +68,21 @@ export async function updateCustomer(
   const result = await db
     .update(customers)
     .set(updateData)
-    .where(and(eq(customers.id, customerId), eq(customers.userId, userId)))
+    .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
     .returning()
   revalidatePath('/customers')
   return result[0]
 }
 
 export async function deleteCustomer(customerId: number) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
   await db
     .delete(customers)
-    .where(and(eq(customers.id, customerId), eq(customers.userId, userId)))
+    .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
   revalidatePath('/customers')
 }
 
-// Bikes 
+// Bikes
 
 export async function getBikes() {
   const userId = await getUserId()
@@ -134,11 +136,11 @@ export async function createBike(data: {
   }
 
   try {
-    const userId = await getUserId()
+    const currentUser = await requireRole('admin')
     const { registrationNumber, customerId, brand, model, year, mileage } = validation.data
 
     await db.insert(bikes).values({
-      userId,
+      userId: currentUser.id,
       registrationNumber,
       customerId,
       brand,
@@ -150,14 +152,15 @@ export async function createBike(data: {
     revalidatePath('/customers')
     return { success: true, error: null }
   } catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'You do not have permission to add bikes.' }
+    }
     if (error?.code === '23505') {
       return { success: false, error: 'A bike with this registration number already exists.' }
     }
-    
     if (error?.code === '23514') {
       return { success: false, error: 'Invalid registration number format.' }
     }
-
     return { success: false, error: 'Something went wrong. Please try again.' }
   }
 }
@@ -167,11 +170,11 @@ export async function updateBike(
   data: {
     brand?: string
     model?: string
-    year?: string 
+    year?: string
     mileage?: string
   }
 ) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
   const updateData: any = {}
   if (data.brand) updateData.brand = data.brand
   if (data.model) updateData.model = data.model
@@ -183,16 +186,16 @@ export async function updateBike(
   const result = await db
     .update(bikes)
     .set(updateData)
-    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, userId)))
+    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, currentUser.id)))
     .returning()
   revalidatePath('/customers')
   return result[0]
 }
 
 export async function deleteBike(registrationNumber: string) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
   await db
     .delete(bikes)
-    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, userId)))
+    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, currentUser.id)))
   revalidatePath('/customers')
 }
