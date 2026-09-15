@@ -133,12 +133,7 @@ export default function InventoryPage() {
           >
             Buy Parts
           </Button>
-          {permissionError && (
-              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{permissionError}</span>
-              </div>
-          )}</div>
+          </div>
         {/* Inventory Tab View */}
         {tab === 'inventory' && (
           <div className="space-y-6">
@@ -332,6 +327,12 @@ export default function InventoryPage() {
                       <Button type="button" onClick={resetForm} variant="outline">
                         Cancel
                       </Button>
+                      {permissionError && (
+                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
+                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                            <span>{permissionError}</span>
+                        </div>
+                      )}
                     </div>
                   </form>
                 </CardContent>
