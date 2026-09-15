@@ -6,6 +6,7 @@ import { parts, purchases } from '@/lib/db/schema'
 import { and, desc, eq, lt, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import {requireRole} from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -42,8 +43,7 @@ export async function createPart(data: {
   notes?: string | null
 }) {
   const userId = await getUserId()
-
-
+  const currentUser = await requireRole('admin')
   const cleanSupplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
   const cleanNotes = data.notes && data.notes !== 'None' ? data.notes : null
 
@@ -77,7 +77,7 @@ export async function createPart(data: {
       const [inserted] = await tx
         .insert(parts)
         .values({
-          userId,
+          userId:currentUser.id,
           name: data.name,
           sku: data.sku,
           category: data.category,
@@ -94,7 +94,7 @@ export async function createPart(data: {
 
 
     await tx.insert(purchases).values({
-      userId,
+      userId: currentUser.id,
       partId: targetPart.id,
       supplier: cleanSupplier,
       quantityBought: data.quantity,
@@ -118,7 +118,7 @@ export async function updatePart(
   }
 ) {
   const userId = await getUserId()
-
+  const currentUser = await requireRole('admin')
   const updateData: Partial<typeof parts.$inferInsert> = {
     updatedAt: new Date(),
   }
@@ -137,7 +137,7 @@ export async function updatePart(
   const [result] = await db
     .update(parts)
     .set(updateData)
-    .where(and(eq(parts.id, partId), eq(parts.userId, userId)))
+    .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
     .returning()
 
   revalidatePath('/inventory')
@@ -145,11 +145,11 @@ export async function updatePart(
 }
 
 export async function deletePart(partId: number) {
-  const userId = await getUserId()
+  const currentUser = await requireRole('admin')
 
   await db
     .delete(parts)
-    .where(and(eq(parts.id, partId), eq(parts.userId, userId)))
+    .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
 
   revalidatePath('/inventory')
   return { success: true }
