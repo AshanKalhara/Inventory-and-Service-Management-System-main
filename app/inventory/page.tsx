@@ -58,19 +58,20 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setPermissionError(null)
     try {
       if (editingId) {
         await updatePart(editingId, formData)
       } else {
         await createPart(formData)
-      }
+        }
       resetForm()
       loadData()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save part:', error)
+      setPermissionError(error.message || 'Something went wrong. Please try again.')
     }
   }
-
   const handleEdit = (part: any) => {
     setFormData({
       name: part.name,
