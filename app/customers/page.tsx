@@ -157,14 +157,8 @@ export function ServiceHistory({
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([])
-  // Bikes belonging only to the currently selected customer (used for the right-hand "Bikes" panel)
   const [customerBikes, setCustomerBikes] = useState<any[]>([])
-  // ALL bikes across every customer — needed so invoice generation can resolve the correct bike
-  // regardless of which customer is currently selected (this mirrors the Invoices page behavior).
   const [allBikes, setAllBikes] = useState<any[]>([])
-  // ALL service records — needed so invoice generation can resolve the matching record.
-  // (Previously this stayed an empty array forever, which caused invoices viewed from the
-  // Customers page to show "N/A" for bike/mileage/technician while the Invoices page worked fine.)
   const [serviceRecords, setServiceRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -212,8 +206,6 @@ export default function CustomersPage() {
     }
   }
 
-  // Loads the data needed to correctly render an invoice from ANY point in this page
-  // (list, profile modal, or the invoice modal itself) — same data the Invoices page uses.
   const loadGlobalInvoiceData = async () => {
     try {
       const [recordsData, bikesData] = await Promise.all([
@@ -363,8 +355,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
   }
 
-  // Opens the invoice modal with FULL invoice data (line items included) — same pattern
-  // the Invoices page uses for its "eye" button, so the rendered invoice is identical.
   const handleViewInvoiceClick = async (invoice: any) => {
     try {
       const fullInvoice = await getInvoiceById(invoice.id)

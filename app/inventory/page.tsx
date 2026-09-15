@@ -5,7 +5,7 @@ import { Sidebar } from '@/components/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit2, Trash2, AlertCircle, ShoppingBag } from 'lucide-react'
+import { Plus, Edit2, Trash2, AlertCircle, ShoppingBag, AlertTriangle } from 'lucide-react'
 import { getParts, createPart, updatePart, deletePart, getLowStockParts } from '@/app/actions/inventory'
 
 export default function InventoryPage() {
@@ -16,6 +16,7 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
 
   const initialFormData = {
     name: '',
@@ -131,8 +132,12 @@ export default function InventoryPage() {
           >
             Buy Parts
           </Button>
-        </div>
-
+          {permissionError && (
+              <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{permissionError}</span>
+              </div>
+          )}</div>
         {/* Inventory Tab View */}
         {tab === 'inventory' && (
           <div className="space-y-6">
