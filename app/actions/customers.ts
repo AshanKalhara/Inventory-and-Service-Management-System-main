@@ -47,7 +47,8 @@ export async function createCustomer(data: {
       .returning()
     revalidatePath('/customers')
     return { success: true, data: result[0] }
-  } catch (error: any) {
+  } 
+  catch (error: any) {
     if (error?.message?.startsWith('Forbidden')) {
       return { success: false, error: 'To make this change you need admin privileges.' }
     }

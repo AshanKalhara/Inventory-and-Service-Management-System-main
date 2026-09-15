@@ -6,7 +6,7 @@ import { parts, purchases } from '@/lib/db/schema'
 import { and, desc, eq, lt, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import {requireRole} from '@/lib/auth-helpers'
+import { requireRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -42,68 +42,70 @@ export async function createPart(data: {
   supplier?: string | null
   notes?: string | null
 }) {
-  const userId = await getUserId()
-  const currentUser = await requireRole('admin')
-  const cleanSupplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
-  const cleanNotes = data.notes && data.notes !== 'None' ? data.notes : null
+  try {
+    const currentUser = await requireRole('admin')
+    const cleanSupplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
+    const cleanNotes = data.notes && data.notes !== 'None' ? data.notes : null
 
-  return await db.transaction(async (tx) => {
- 
-    const [existingPart] = await tx
-      .select()
-      .from(parts)
-      .where(and(eq(parts.sku, data.sku), eq(parts.userId, userId)))
-      .limit(1)
+    return await db.transaction(async (tx) => {
+      const [existingPart] = await tx
+        .select()
+        .from(parts)
+        .where(and(eq(parts.sku, data.sku), eq(parts.userId, currentUser.id)))
+        .limit(1)
 
-    let targetPart: typeof parts.$inferSelect
+      let targetPart: typeof parts.$inferSelect
 
-    if (existingPart) {
+      if (existingPart) {
+        const [updated] = await tx
+          .update(parts)
+          .set({
+            quantity: sql`${parts.quantity} + ${data.quantity}`,
+            unitPrice: data.unitPrice.toString(),
+            supplier: cleanSupplier ?? existingPart.supplier,
+            notes: cleanNotes ?? existingPart.notes,
+            updatedAt: new Date(),
+          })
+          .where(eq(parts.id, existingPart.id))
+          .returning()
 
-      const [updated] = await tx
-        .update(parts)
-        .set({
-          quantity: sql`${parts.quantity} + ${data.quantity}`,
-          unitPrice: data.unitPrice.toString(),
-          supplier: cleanSupplier ?? existingPart.supplier,
-          notes: cleanNotes ?? existingPart.notes,
-          updatedAt: new Date(),
-        })
-        .where(eq(parts.id, existingPart.id))
-        .returning()
+        targetPart = updated
+      } else {
+        const [inserted] = await tx
+          .insert(parts)
+          .values({
+            userId: currentUser.id,
+            name: data.name,
+            sku: data.sku,
+            category: data.category,
+            quantity: data.quantity,
+            minStock: data.minStock,
+            unitPrice: data.unitPrice.toString(),
+            supplier: cleanSupplier,
+            notes: cleanNotes,
+          })
+          .returning()
 
-      targetPart = updated
-    } else {
- 
-      const [inserted] = await tx
-        .insert(parts)
-        .values({
-          userId:currentUser.id,
-          name: data.name,
-          sku: data.sku,
-          category: data.category,
-          quantity: data.quantity,
-          minStock: data.minStock,
-          unitPrice: data.unitPrice.toString(),
-          supplier: cleanSupplier,
-          notes: cleanNotes,
-        })
-        .returning()
+        targetPart = inserted
+      }
 
-      targetPart = inserted
-    }
+      await tx.insert(purchases).values({
+        userId: currentUser.id,
+        partId: targetPart.id,
+        supplier: cleanSupplier,
+        quantityBought: data.quantity,
+        purchasePrice: data.unitPrice.toString(),
+      })
 
-
-    await tx.insert(purchases).values({
-      userId: currentUser.id,
-      partId: targetPart.id,
-      supplier: cleanSupplier,
-      quantityBought: data.quantity,
-      purchasePrice: data.unitPrice.toString(),
+      revalidatePath('/inventory')
+      return { success: true, targetPart }
     })
-
-    revalidatePath('/inventory')
-    return targetPart
-  })
+  } catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
 }
 
 export async function updatePart(
@@ -117,7 +119,6 @@ export async function updatePart(
     notes?: string | null
   }
 ) {
-  const userId = await getUserId()
   const currentUser = await requireRole('admin')
   const updateData: Partial<typeof parts.$inferInsert> = {
     updatedAt: new Date(),
