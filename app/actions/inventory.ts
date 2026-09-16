@@ -32,6 +32,10 @@ export async function getLowStockParts() {
     .orderBy(desc(parts.createdAt))
 }
 
+type CreatePartResult =
+  | { success: true; targetPart: typeof parts.$inferSelect }
+  | { success: false; error: string }
+
 export async function createPart(data: {
   name: string
   sku: string
@@ -41,7 +45,7 @@ export async function createPart(data: {
   unitPrice: number
   supplier?: string | null
   notes?: string | null
-}) {
+}): Promise<CreatePartResult> {
   try {
     const currentUser = await requireRole('admin')
     const cleanSupplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
@@ -98,7 +102,7 @@ export async function createPart(data: {
       })
 
       revalidatePath('/inventory')
-      return { success: true, targetPart }
+      return { success: true as const, targetPart }
     })
   } catch (error: any) {
     if (error?.message?.startsWith('Forbidden')) {
@@ -107,6 +111,10 @@ export async function createPart(data: {
     return { success: false, error: 'Something went wrong. Please try again.' }
   }
 }
+
+type UpdatePartResult =
+  | { success: true; data: typeof parts.$inferSelect }
+  | { success: false; error: string }
 
 export async function updatePart(
   partId: number,
@@ -118,40 +126,56 @@ export async function updatePart(
     supplier?: string | null
     notes?: string | null
   }
-) {
-  const currentUser = await requireRole('admin')
-  const updateData: Partial<typeof parts.$inferInsert> = {
-    updatedAt: new Date(),
-  }
+): Promise<UpdatePartResult> {
+  try {
+    const currentUser = await requireRole('admin')
+    const updateData: Partial<typeof parts.$inferInsert> = {
+      updatedAt: new Date(),
+    }
 
-  if (data.name !== undefined) updateData.name = data.name
-  if (data.quantity !== undefined) updateData.quantity = data.quantity
-  if (data.minStock !== undefined) updateData.minStock = data.minStock
-  if (data.unitPrice !== undefined) updateData.unitPrice = data.unitPrice.toString()
-  if (data.supplier !== undefined) {
-    updateData.supplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
-  }
-  if (data.notes !== undefined) {
-    updateData.notes = data.notes && data.notes !== 'None' ? data.notes : null
-  }
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.quantity !== undefined) updateData.quantity = data.quantity
+    if (data.minStock !== undefined) updateData.minStock = data.minStock
+    if (data.unitPrice !== undefined) updateData.unitPrice = data.unitPrice.toString()
+    if (data.supplier !== undefined) {
+      updateData.supplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
+    }
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes && data.notes !== 'None' ? data.notes : null
+    }
 
-  const [result] = await db
-    .update(parts)
-    .set(updateData)
-    .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
-    .returning()
+    const [result] = await db
+      .update(parts)
+      .set(updateData)
+      .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
+      .returning()
 
-  revalidatePath('/inventory')
-  return result
+    revalidatePath('/inventory')
+    return { success: true as const, data: result }
+  } catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
 }
 
-export async function deletePart(partId: number) {
-  const currentUser = await requireRole('admin')
+type DeletePartResult =
+  | { success: true }
+  | { success: false; error: string }
 
-  await db
-    .delete(parts)
-    .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
-
-  revalidatePath('/inventory')
-  return { success: true }
+export async function deletePart(partId: number): Promise<DeletePartResult> {
+  try {
+    const currentUser = await requireRole('admin')
+    await db
+      .delete(parts)
+      .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
+    revalidatePath('/inventory')
+    return { success: true as const }
+  } catch (error: any) {
+    if (error?.message?.startsWith('Forbidden')) {
+      return { success: false, error: 'To make this change you need admin privileges.' }
+    }
+    return { success: false, error: 'Something went wrong. Please try again.' }
+  }
 }

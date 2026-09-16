@@ -12,7 +12,6 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<'inventory' | 'buy parts'>('inventory')
   const [parts, setParts] = useState<any[]>([])
   const [lowStockParts, setLowStockParts] = useState<any[]>([])
-  const [purchases, setPurchases] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -61,10 +60,18 @@ export default function InventoryPage() {
     setPermissionError(null)
     try {
       if (editingId) {
-        await updatePart(editingId, formData)
-      } else {
-        await createPart(formData)
+        const result = await updatePart(editingId, formData)
+        if (!result.success) {
+          setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+          return
         }
+      } else {
+        const result = await createPart(formData)
+        if (!result.success) {
+          setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+          return
+        }
+      }
       resetForm()
       loadData()
     } catch (error: any) {
@@ -72,6 +79,7 @@ export default function InventoryPage() {
       setPermissionError(error.message || 'Something went wrong. Please try again.')
     }
   }
+
   const handleEdit = (part: any) => {
     setFormData({
       name: part.name,
@@ -89,12 +97,12 @@ export default function InventoryPage() {
 
   const handleDelete = async (partId: number) => {
     if (confirm('Are you sure you want to delete this part?')) {
-      try {
-        await deletePart(partId)
-        loadData()
-      } catch (error) {
-        console.error('Failed to delete part:', error)
+      const result = await deletePart(partId)
+      if (!result.success) {
+        setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+        return
       }
+      loadData()
     }
   }
 
@@ -133,7 +141,8 @@ export default function InventoryPage() {
           >
             Buy Parts
           </Button>
-          </div>
+        </div>
+
         {/* Inventory Tab View */}
         {tab === 'inventory' && (
           <div className="space-y-6">
@@ -233,7 +242,7 @@ export default function InventoryPage() {
               <h3 className="text-xl font-semibold">Procurement & Buying</h3>
             </div>
             <div>
-            {/* Add / Edit Form */}
+              {/* Add / Edit Form */}
               <Card className="mb-8">
                 <CardHeader>
                   <CardTitle>{editingId ? 'Edit Part' : 'Log New Part Purchase'}</CardTitle>
@@ -320,6 +329,14 @@ export default function InventoryPage() {
                         />
                       </div>
                     </div>
+
+                    {permissionError && (
+                      <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                        <span>{permissionError}</span>
+                      </div>
+                    )}
+
                     <div className="flex gap-4">
                       <Button type="submit" className="bg-primary hover:bg-primary/90">
                         {editingId ? 'Update Part' : 'Save Purchase'}
@@ -327,17 +344,11 @@ export default function InventoryPage() {
                       <Button type="button" onClick={resetForm} variant="outline">
                         Cancel
                       </Button>
-                      {permissionError && (
-                        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
-                            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                            <span>{permissionError}</span>
-                        </div>
-                      )}
                     </div>
                   </form>
                 </CardContent>
               </Card>
-              </div>
+            </div>
 
             {/* Recently Bought Parts */}
             <Card>
@@ -358,7 +369,7 @@ export default function InventoryPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className='text-left font-semibold py-2'>SKU</th>
+                          <th className="text-left font-semibold py-2">SKU</th>
                           <th className="text-left font-semibold py-2">Part Name</th>
                           <th className="text-left font-semibold py-2">Supplier</th>
                           <th className="text-right font-semibold py-2">Qty Bought</th>
