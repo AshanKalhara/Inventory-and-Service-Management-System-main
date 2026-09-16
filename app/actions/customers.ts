@@ -7,7 +7,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { requireRole } from '@/lib/auth-helpers'
+import { requireRole, withRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -15,7 +15,7 @@ async function getUserId() {
   return session.user.id
 }
 
-// Customers
+// Getting Customers-----------------------------------------------
 
 export async function getCustomers() {
   const userId = await getUserId()
@@ -27,14 +27,15 @@ export async function getCustomers() {
   return JSON.parse(JSON.stringify(result))
 }
 
+//Creating Customer--------------------------------------------
+
 export async function createCustomer(data: {
   name: string
   email?: string
   phone?: string
   address?: string
 }) {
-  try {
-    const currentUser = await requireRole('admin')
+  return withRole('admin', async (currentUser) => {
     const result = await db
       .insert(customers)
       .values({
@@ -45,16 +46,13 @@ export async function createCustomer(data: {
         address: data.address,
       })
       .returning()
+
     revalidatePath('/customers')
-    return { success: true, data: result[0] }
-  } 
-  catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+    return result[0]
+  })
 }
+
+//Update Customer---------------------------------------
 
 export async function updateCustomer(
   customerId: number,
@@ -65,8 +63,7 @@ export async function updateCustomer(
     address?: string
   }
 ) {
-  try {
-    const currentUser = await requireRole('admin')
+  return withRole('admin', async (currentUser) => {
     const updateData: any = {}
     if (data.name) updateData.name = data.name
     if (data.email !== undefined) updateData.email = data.email
@@ -81,32 +78,21 @@ export async function updateCustomer(
     .returning()
   revalidatePath('/customers')
   return result[0]
-}
-catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+})
 }
 
+//Delete Customer---------------------------------------------
+
 export async function deleteCustomer(customerId: number) {
-  try {
-    const currentUser = await requireRole('admin')
+  return withRole('admin', async (currentUser) => {
     await db
       .delete(customers)
       .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
   revalidatePath('/customers')
-}
-catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+})
 }
 
-// Bikes
+//Get Bikes-----------------------------------------------
 
 export async function getBikes() {
   const userId = await getUserId()
@@ -117,6 +103,8 @@ export async function getBikes() {
     .orderBy(desc(bikes.createdAt))
   return JSON.parse(JSON.stringify(result))
 }
+
+//Get Bikes of each customer---------------------------------
 
 export async function getCustomerBikes(customerId: number) {
   const userId = await getUserId()

@@ -32,3 +32,23 @@ export async function requireRole(minimumRole: Role) {
   }
   return currentUser
 }
+
+
+export type ActionResult<T> = | { success: true; data: T } | { success: false; error: string }
+
+export async function withRole<T>(
+  minimumRole: Role,
+  fn: (currentUser: Awaited<ReturnType<typeof getCurrentUser>>) => Promise<T>
+): Promise<ActionResult<T>>{
+  
+  try{
+    const currentUser = await requireRole(minimumRole)
+    const data = await fn(currentUser)
+    return { success: true, data}
+  } catch (error: any) {
+    if (error?.message. startsWith ('Forbidden')){
+      return { success: false, error: 'To make this change you need admin privileges.'}
+    }
+    return { success: false, error: 'Something went wrong. Please try again.'}
+  }
+}

@@ -6,6 +6,7 @@ import { services, customers, bikes, serviceRecords, serviceRecordItems, parts }
 import { and, desc, eq, ilike } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { requireRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -31,20 +32,27 @@ export async function createService(data: {
   estimatedDuration?: number
   category: string
 }) {
-  const userId = await getUserId()
-  const result = await db
-    .insert(services)
-    .values({
-      userId,
-      name: data.name,
-      description: data.description,
-      price: data.price.toString(),
-      estimatedDuration: data.estimatedDuration,
-      category: data.category,
-    })
-    .returning()
-  revalidatePath('/services')
-  return result[0]
+  try {
+    const currentUser = await requireRole('admin')
+    const result = await db
+      .insert(services)
+      .values({
+        userId: currentUser.id,
+        name: data.name,
+        description: data.description,
+        price: data.price.toString(),
+        estimatedDuration: data.estimatedDuration,
+        category: data.category,
+      })
+      .returning()
+    revalidatePath('/services')
+    return result[0]
+  } catch (error: any){
+    if (error?.message?.startsWith('Forbidden')){
+      return { success: false, error: 'To make this change you need admin provileges.' }
+    }
+    return { success: false, error: ' Something went wrong. Please try again.'}
+}
 }
 
 export async function getBikeServiceHistory(registrationNumber: string) {

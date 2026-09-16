@@ -709,6 +709,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                     />
                   </div>
                 </div>
+                
+                 {permissionError && (
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{permissionError}</span>
+                    </div>
+                  )}
+
                 <div className="flex gap-4">
                   <Button type="submit" className="bg-primary hover:bg-primary/90">
                     {editingId ? 'Update Customer' : 'Add Customer'}
@@ -724,12 +732,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   >
                     Cancel
                   </Button>
-                  {permissionError && (
-                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                      <span>{permissionError}</span>
-                    </div>
-                  )}
+                 
                 </div>
               </form>
             </CardContent>
