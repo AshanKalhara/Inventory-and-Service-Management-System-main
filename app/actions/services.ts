@@ -6,7 +6,7 @@ import { services, customers, bikes, serviceRecords, serviceRecordItems, parts }
 import { and, desc, eq, ilike } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { requireRole } from '@/lib/auth-helpers'
+import { requireRole, withRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })

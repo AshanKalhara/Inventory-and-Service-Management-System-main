@@ -7,7 +7,7 @@ import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { requireRole, withRole } from '@/lib/auth-helpers'
+import { withRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -113,6 +113,7 @@ export async function getCustomerBikes(customerId: number) {
     .from(bikes)
     .where(and(eq(bikes.userId, userId), eq(bikes.customerId, customerId)))
     .orderBy(desc(bikes.createdAt))
+    return result
 }
 
 const plateRegex = /^[A-Z]{1,3}-[0-9]{4}$|^[0-9]{2,3}-[0-9]{4}$|^[A-Z]{2}\s[A-Z]{2,3}-[0-9]{4}$/i
@@ -131,6 +132,8 @@ const createBikeSchema = z.object({
   imageUrl: z.string().optional()
 })
 
+//Add new bikes ----------------------------------
+
 export async function createBike(data: {
   customerId: number
   brand: string
@@ -146,12 +149,10 @@ export async function createBike(data: {
     const firstError = validation.error.issues[0]?.message
     return { success: false, error: firstError }
   }
-
-  try {
-    const currentUser = await requireRole('admin')
+  return withRole('admin', async (currentUser) => {
     const { registrationNumber, customerId, brand, model, year, mileage } = validation.data
 
-    await db.insert(bikes).values({
+    const [inserted] = await db.insert(bikes).values({
       userId: currentUser.id,
       registrationNumber,
       customerId,
@@ -160,22 +161,14 @@ export async function createBike(data: {
       year: year || null,
       mileage: mileage || '0',
     })
+    .returning()
 
     revalidatePath('/customers')
-    return { success: true, error: null }
-  } catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'You do not have permission to add bikes.' }
-    }
-    if (error?.code === '23505') {
-      return { success: false, error: 'A bike with this registration number already exists.' }
-    }
-    if (error?.code === '23514') {
-      return { success: false, error: 'Invalid registration number format.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+    return [inserted]
+    }) 
 }
+
+//Update Bikes---------------------------------------------------
 
 export async function updateBike(
   registrationNumber: string,
@@ -186,7 +179,7 @@ export async function updateBike(
     mileage?: string
   }
 ) {
-  const currentUser = await requireRole('admin')
+  return withRole('admin',async (currentUser) => {
   const updateData: any = {}
   if (data.brand) updateData.brand = data.brand
   if (data.model) updateData.model = data.model
@@ -202,12 +195,17 @@ export async function updateBike(
     .returning()
   revalidatePath('/customers')
   return result[0]
+})
 }
 
+//Delete bikes----------------------------------------------------------
+
 export async function deleteBike(registrationNumber: string) {
-  const currentUser = await requireRole('admin')
+  return withRole('admin', async(currentUser) => {
   await db
     .delete(bikes)
     .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, currentUser.id)))
   revalidatePath('/customers')
+  return null
+})
 }
