@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { buttonVariants } from '@/components/ui/button'
+import { PermissionWarning } from '@/components/ui/permission-warning'
 import { Sidebar } from '@/components/sidebar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -168,7 +168,6 @@ export default function CustomersPage() {
   const [viewingProfile, setViewingProfile] = useState<any | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null)
-  const [permissionError, setPermissionError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -273,25 +272,18 @@ export default function CustomersPage() {
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
-  setPermissionError(null)
-  try {
     if (editingId) {
       await updateCustomer(editingId, formData)
     } else {
       const result = await createCustomer(formData)
       if (!result.success) {
-  setPermissionError(result.error ?? 'Something went wrong. Please try again.')
-  return
-      }
+
     }
     setFormData({ name: '', email: '', phone: '', address: '' })
     setEditingId(null)
     setShowForm(false)
     await loadCustomers()
-  } catch (error) {
-    console.error('Failed to save customer:', error)
-    setPermissionError('Something went wrong. Please try again.')
-  }
+  } 
 }
 
   const handleBikeSubmit = async (e: React.FormEvent) => {
@@ -710,12 +702,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </div>
                 </div>
                 
-                 {permissionError && (
-                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                      <span>{permissionError}</span>
-                    </div>
-                  )}
+                 <PermissionWarning message={Permissions} />
+                  
 
                 <div className="flex gap-4">
                   <Button type="submit" className="bg-primary hover:bg-primary/90">
