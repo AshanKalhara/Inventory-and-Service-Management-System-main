@@ -6,7 +6,7 @@ import { services, customers, bikes, serviceRecords, serviceRecordItems, parts }
 import { and, desc, eq, ilike } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { requireRole, withRole } from '@/lib/auth-helpers'
+import { withRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -23,7 +23,7 @@ export async function getServices() {
     .orderBy(desc(services.createdAt))
 }
 
-//--------- Create Service ----
+//Create Service ------------------------------------------
 
 export async function createService(data: {
   name: string
@@ -32,8 +32,7 @@ export async function createService(data: {
   estimatedDuration?: number
   category: string
 }) {
-  try {
-    const currentUser = await requireRole('admin')
+  return withRole ('admin', async(currentUser) => {
     const result = await db
       .insert(services)
       .values({
@@ -47,13 +46,10 @@ export async function createService(data: {
       .returning()
     revalidatePath('/services')
     return result[0]
-  } catch (error: any){
-    if (error?.message?.startsWith('Forbidden')){
-      return { success: false, error: 'To make this change you need admin provileges.' }
-    }
-    return { success: false, error: ' Something went wrong. Please try again.'}
+  } )
 }
-}
+
+//Get service history of bikes-------------------------------------------
 
 export async function getBikeServiceHistory(registrationNumber: string) {
   try {
@@ -94,6 +90,7 @@ export async function getBikeServiceHistory(registrationNumber: string) {
 
 export type BikeServiceHistoryResult = Awaited<ReturnType<typeof getBikeServiceHistory>>;
 
+//Update services-------------------------------------------
 export async function updateService(
   serviceId: number,
   data: {
@@ -105,7 +102,7 @@ export async function updateService(
     active?: boolean
   }
 ) {
-  const userId = await getUserId()
+  return withRole('admin', async(currentUser)=> {
   const result = await db
     .update(services)
     .set({
@@ -116,23 +113,26 @@ export async function updateService(
       ...(data.category && { category: data.category }),
       ...(data.active !== undefined && { active: data.active }),
     })
-    .where(and(eq(services.id, serviceId), eq(services.userId, userId)))
+    .where(and(eq(services.id, serviceId), eq(services.userId, currentUser.id)))
     .returning()
     
   revalidatePath('/services')
   return result[0]
+})
 }
+
+//Delete services--------------------------------------------------------
 
 export async function deleteService(serviceId: number) {
-  const userId = await getUserId()
+  return withRole('admin', async(currentUser) => {
   await db
     .delete(services)
-    .where(and(eq(services.id, serviceId), eq(services.userId, userId)))
+    .where(and(eq(services.id, serviceId), eq(services.userId, currentUser.id)))
     
   revalidatePath('/services')
+})
 }
 
-// Service Record CRUD
 export async function getServiceRecords() {
   const userId = await getUserId()
   return db
@@ -141,6 +141,8 @@ export async function getServiceRecords() {
     .where(eq(serviceRecords.userId, userId))
     .orderBy(desc(serviceRecords.serviceDate))
 }
+
+//Create Service Records-----------------------------------
 
 export async function createServiceRecord(data: {
   customerId: number
@@ -152,12 +154,11 @@ export async function createServiceRecord(data: {
   notes?: string
   cost?: number
 }) {
-  const userId = await getUserId()
-
+  return withRole('admin', async(currentUser) => {
   const result = await db
     .insert(serviceRecords)
     .values({
-      userId,
+      userId: currentUser.id,
       registrationNumber: data.registrationNumber,
       serviceDate: data.serviceDate,
       milageOnService: data.milageOnService,
@@ -174,7 +175,10 @@ export async function createServiceRecord(data: {
   revalidatePath('/services')
   revalidatePath('/customers')
   return result[0]
+})
 }
+
+//Update service records--------------------------------
 
 export async function updateServiceRecord(
   recordId: number,
@@ -189,7 +193,7 @@ export async function updateServiceRecord(
     milageOnService?: string
   }
 ) {
-  const userId = await getUserId()
+  return withRole('admin', async(currentUser) => {
   const updateData: any = {}
   
   if (data.status) updateData.status = data.status
@@ -206,7 +210,7 @@ export async function updateServiceRecord(
   const result = await db
     .update(serviceRecords)
     .set(updateData)
-    .where(and(eq(serviceRecords.id, recordId), eq(serviceRecords.userId, userId)))
+    .where(and(eq(serviceRecords.id, recordId), eq(serviceRecords.userId, currentUser.id)))
     .returning()
 
   if (result[0]) {
@@ -216,17 +220,21 @@ export async function updateServiceRecord(
   revalidatePath('/services')
   revalidatePath('/customers')
   return result[0]
+})
 }
+
+//Delete Service Records------------------------------------------
 
 export async function deleteServiceRecord(recordId: number) {
-  const userId = await getUserId()
+  return withRole('admin', async(currentUser) => {
   await db
     .delete(serviceRecords)
-    .where(and(eq(serviceRecords.id, recordId), eq(serviceRecords.userId, userId)))
+    .where(and(eq(serviceRecords.id, recordId), eq(serviceRecords.userId, currentUser.id)))
   revalidatePath('/services')
+})
 }
 
-// Service Record Items
+// Service Record Items---------------------------------------------
 export async function createServiceRecordItem(data: {
   serviceRecordId: number
   serviceId?: number | null
@@ -239,7 +247,7 @@ export async function createServiceRecordItem(data: {
 }) {
   const userId = await getUserId()
   
-  // Deduct inventory if partId is provided
+  // Deduct inventory if partId is provided---------------------------------------------------
   if (data.partId) {
     const part = await db.select().from(parts).where(eq(parts.id, data.partId)).limit(1)
     if (part.length > 0) {
@@ -272,17 +280,16 @@ export async function createServiceRecordItem(data: {
   return result[0]
 }
 
+//Delete Service record items----------------------------------
+
 export async function deleteServiceRecordItem(itemId: number) {
   const userId = await getUserId()
-  
-  // Get the item to retrieve partId and quantity
   const item = await db
     .select()
     .from(serviceRecordItems)
     .where(eq(serviceRecordItems.id, itemId))
     .limit(1)
   
-  // Restore inventory if partId exists
   if (item.length > 0 && item[0].partId) {
     const part = await db.select().from(parts).where(eq(parts.id, item[0].partId)).limit(1)
     if (part.length > 0) {
