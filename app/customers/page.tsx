@@ -331,16 +331,16 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleDelete = async (customerId: number) => {
     if (confirm('Are you sure you want to delete this customer?')) {
-      try {
-        await deleteCustomer(customerId)
+      const result = await deleteCustomer(customerId)
+      if (!result.success){
+        setPermissionError(result.error ?? 'Something went wrong. {lease try again.')
+        return
+      }
         if (selectedCustomerId === customerId) {
           setSelectedCustomerId(null)
           setCustomerBikes([])
         }
         await loadCustomers()
-      } catch (error) {
-        console.error('Failed to delete customer:', error)
-      }
     }
   }
 

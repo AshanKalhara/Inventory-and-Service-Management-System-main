@@ -18,11 +18,10 @@ async function getUserId() {
 // Getting Customers-----------------------------------------------
 
 export async function getCustomers() {
-  const userId = await getUserId()
+  await getUserId()
   const result = await db
     .select()
     .from(customers)
-    .where(eq(customers.userId, userId))
     .orderBy(desc(customers.createdAt))
   return JSON.parse(JSON.stringify(result))
 }
@@ -74,7 +73,7 @@ export async function updateCustomer(
   const result = await db
     .update(customers)
     .set(updateData)
-    .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
+    .where(and(eq(customers.id, customerId)))
     .returning()
   revalidatePath('/customers')
   return result[0]
@@ -87,7 +86,7 @@ export async function deleteCustomer(customerId: number) {
   return withRole('admin', async (currentUser) => {
     await db
       .delete(customers)
-      .where(and(eq(customers.id, customerId), eq(customers.userId, currentUser.id)))
+      .where(and(eq(customers.id, customerId)))
   revalidatePath('/customers')
 })
 }
@@ -191,7 +190,7 @@ export async function updateBike(
   const result = await db
     .update(bikes)
     .set(updateData)
-    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, currentUser.id)))
+    .where(and(eq(bikes.registrationNumber, registrationNumber)))
     .returning()
   revalidatePath('/customers')
   return result[0]
@@ -204,7 +203,7 @@ export async function deleteBike(registrationNumber: string) {
   return withRole('admin', async(currentUser) => {
   await db
     .delete(bikes)
-    .where(and(eq(bikes.registrationNumber, registrationNumber), eq(bikes.userId, currentUser.id)))
+    .where(and(eq(bikes.registrationNumber, registrationNumber)))
   revalidatePath('/customers')
   return null
 })

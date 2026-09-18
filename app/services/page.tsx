@@ -24,6 +24,7 @@ import { getParts } from '@/app/actions/inventory'
 import { getBikeImagebyModel } from '@/lib/db/bike-model'
 import { getServiceNumberMap } from '@/lib/db/service-number'
 import { useMemo } from 'react'
+import { PermissionWarning } from '@/components/ui/permission-warning'
 
 export default function ServicesPage() {
   const [services, setServices] = useState<any[]>([])
@@ -132,10 +133,10 @@ export default function ServicesPage() {
       })
 
       // Save used services for the newly created record
-      if (usedServices.size > 0 && newRecord?.id) {
+      if (usedServices.size > 0 && newRecord?.success && newRecord.data?.id) {
         for (const item of usedServices.values()) {
           await createServiceRecordItem({
-            serviceRecordId: newRecord.id,
+            serviceRecordId: newRecord.data.id,
             serviceId: item.serviceId,
             description: item.service.name,
             quantity: 1,
@@ -146,10 +147,10 @@ export default function ServicesPage() {
       }
 
       // Save used parts for the newly created record
-      if (usedParts.size > 0 && newRecord?.id) {
+      if (usedParts.size > 0 && newRecord?.success && newRecord.data?.id) {
         for (const item of usedParts.values()) {
           await createServiceRecordItem({
-            serviceRecordId: newRecord.id,
+            serviceRecordId: newRecord.data.id,
             partId: item.partId,
             description: item.part.name,
             quantity: item.quantity,
