@@ -168,6 +168,7 @@ export default function CustomersPage() {
   const [viewingProfile, setViewingProfile] = useState<any | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -272,19 +273,27 @@ export default function CustomersPage() {
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
+  setPermissionError(null)
+
     if (editingId) {
-      await updateCustomer(editingId, formData)
+      const result = await updateCustomer(editingId, formData)
+      if (!result.success){
+      setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+      return
+      }
+    
     } else {
       const result = await createCustomer(formData)
       if (!result.success) {
-
+        setPermissionError(result.error ?? 'Something went wrong. Please try again.')
+        return
+      }
     }
+
     setFormData({ name: '', email: '', phone: '', address: '' })
     setEditingId(null)
     setShowForm(false)
     await loadCustomers()
-  } 
-}
 
   const handleBikeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -702,7 +711,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </div>
                 </div>
                 
-                 <PermissionWarning message={Permissions} />
+                 <PermissionWarning message={permissionError} />
                   
 
                 <div className="flex gap-4">
@@ -1116,5 +1125,5 @@ const handleSubmit = async (e: React.FormEvent) => {
         )}
       </main>
     </div>
-  )
+  )}
 }
