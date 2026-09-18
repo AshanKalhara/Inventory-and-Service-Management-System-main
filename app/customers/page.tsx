@@ -294,6 +294,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     setEditingId(null)
     setShowForm(false)
     await loadCustomers()
+  }
 
   const handleBikeSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -315,6 +316,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       console.error('Failed to save bike:', error)
     }
   }
+
 
   const handleEdit = (customer: any) => {
     setFormData({
@@ -1125,5 +1127,5 @@ const handleSubmit = async (e: React.FormEvent) => {
         )}
       </main>
     </div>
-  )}
+  )
 }
