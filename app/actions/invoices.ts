@@ -26,20 +26,33 @@ function generateInvoiceNumber(): string {
 
 // Invoices
 export async function getInvoices() {
-  const userId = await getUserId()
+  await getUserId()
   return db
     .select()
     .from(invoices)
-    .where(eq(invoices.userId, userId))
     .orderBy(desc(invoices.invoiceDate))
 }
+// this is a optinal if user need to see their own data and the admin can see every data this block use to function that--------------
+/*export async function getInvoices() {
+  return withRole(['admin', 'user'], async (currentUser) => {
+    const isUserAdmin = currentUser.role === 'admin'
+
+    return db
+      .select()
+      .from(invoices)
+      .where(
+        isUserAdmin ? undefined : eq(invoices.userId, currentUser.id)
+      )
+      .orderBy(desc(invoices.invoiceDate))
+  })
+}*/
 
 export async function getInvoiceById(invoiceId: number) {
   const userId = await getUserId()
   const invoiceData = await db
     .select()
     .from(invoices)
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+    .where(and(eq(invoices.id, invoiceId)))
 
   if (!invoiceData.length) throw new Error('Invoice not found')
 

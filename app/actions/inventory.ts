@@ -6,7 +6,7 @@ import { parts, purchases } from '@/lib/db/schema'
 import { and, desc, eq, lt, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { requireRole } from '@/lib/auth-helpers'
+import { withRole } from '@/lib/auth-helpers'
 
 async function getUserId() {
   const session = await auth.api.getSession({ headers: await headers() })
@@ -15,11 +15,10 @@ async function getUserId() {
 }
 
 export async function getParts() {
-  const userId = await getUserId()
+  await getUserId()
   return db
     .select()
     .from(parts)
-    .where(eq(parts.userId, userId))
     .orderBy(desc(parts.createdAt))
 }
 
@@ -33,7 +32,7 @@ export async function getLowStockParts() {
 }
 
 type CreatePartResult =
-  | { success: true; targetPart: typeof parts.$inferSelect }
+  | { success: true; data: { targetPart: typeof parts.$inferSelect } }
   | { success: false; error: string }
 
 export async function createPart(data: {
@@ -46,8 +45,8 @@ export async function createPart(data: {
   supplier?: string | null
   notes?: string | null
 }): Promise<CreatePartResult> {
-  try {
-    const currentUser = await requireRole('admin')
+
+  return withRole('admin', async(currentUser) => {
     const cleanSupplier = data.supplier && data.supplier !== 'None' ? data.supplier : null
     const cleanNotes = data.notes && data.notes !== 'None' ? data.notes : null
 
@@ -55,7 +54,7 @@ export async function createPart(data: {
       const [existingPart] = await tx
         .select()
         .from(parts)
-        .where(and(eq(parts.sku, data.sku), eq(parts.userId, currentUser.id)))
+        .where(and(eq(parts.sku, data.sku)))
         .limit(1)
 
       let targetPart: typeof parts.$inferSelect
@@ -102,14 +101,9 @@ export async function createPart(data: {
       })
 
       revalidatePath('/inventory')
-      return { success: true as const, targetPart }
+      return {targetPart}
     })
-  } catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+  })
 }
 
 type UpdatePartResult =
@@ -127,8 +121,7 @@ export async function updatePart(
     notes?: string | null
   }
 ): Promise<UpdatePartResult> {
-  try {
-    const currentUser = await requireRole('admin')
+    return withRole('admin', async(currentUser) => {
     const updateData: Partial<typeof parts.$inferInsert> = {
       updatedAt: new Date(),
     }
@@ -147,17 +140,12 @@ export async function updatePart(
     const [result] = await db
       .update(parts)
       .set(updateData)
-      .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
+      .where(and(eq(parts.id, partId)))
       .returning()
 
     revalidatePath('/inventory')
-    return { success: true as const, data: result }
-  } catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+    return result
+  })
 }
 
 type DeletePartResult =
@@ -165,17 +153,11 @@ type DeletePartResult =
   | { success: false; error: string }
 
 export async function deletePart(partId: number): Promise<DeletePartResult> {
-  try {
-    const currentUser = await requireRole('admin')
+ return withRole('admin', async(currentUser) => {
     await db
       .delete(parts)
       .where(and(eq(parts.id, partId), eq(parts.userId, currentUser.id)))
     revalidatePath('/inventory')
     return { success: true as const }
-  } catch (error: any) {
-    if (error?.message?.startsWith('Forbidden')) {
-      return { success: false, error: 'To make this change you need admin privileges.' }
-    }
-    return { success: false, error: 'Something went wrong. Please try again.' }
-  }
+  } )
 }
