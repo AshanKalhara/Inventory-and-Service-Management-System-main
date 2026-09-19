@@ -75,7 +75,7 @@ export default function InvoicesPage() {
         customerId: parseInt(formData.customerId),
         serviceRecordId: parseInt(formData.serviceRecordId),
         subtotal: itemsSubtotal,
-        tax: formData.serviceFee, // ⚠️ `tax` column repurposed to store the Service Fee amount
+        tax: formData.serviceFee, 
         discount: formData.discount,
         total,
         items: formData.items.length > 0
