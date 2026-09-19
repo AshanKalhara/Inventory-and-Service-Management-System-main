@@ -94,11 +94,10 @@ export async function deleteCustomer(customerId: number) {
 //Get Bikes-----------------------------------------------
 
 export async function getBikes() {
-  const userId = await getUserId()
+  await getUserId()
   const result = await db
     .select()
     .from(bikes)
-    .where(eq(bikes.userId, userId))
     .orderBy(desc(bikes.createdAt))
   return JSON.parse(JSON.stringify(result))
 }
@@ -106,11 +105,11 @@ export async function getBikes() {
 //Get Bikes of each customer---------------------------------
 
 export async function getCustomerBikes(customerId: number) {
-  const userId = await getUserId()
+  await getUserId()
   const result = await db
     .select()
     .from(bikes)
-    .where(and(eq(bikes.userId, userId), eq(bikes.customerId, customerId)))
+    .where(eq(bikes.customerId, customerId))
     .orderBy(desc(bikes.createdAt))
     return result
 }

@@ -118,7 +118,7 @@ export async function createInvoice(data: {
 }
 
 export async function updateInvoiceStatus(invoiceId: number, status: string) {
-  const userId = await getUserId()
+  await getUserId()
   const updateData: any = {
     status,
     updatedAt: new Date(),
@@ -130,19 +130,19 @@ export async function updateInvoiceStatus(invoiceId: number, status: string) {
   const result = await db
     .update(invoices)
     .set(updateData)
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+    .where(and(eq(invoices.id, invoiceId)))
     .returning()
   revalidatePath('/invoices')
   return result[0]
 }
 
 export async function deleteInvoice(invoiceId: number) {
-  const userId = await getUserId()
+  await getUserId()
   await db
     .delete(invoiceItems)
     .where(eq(invoiceItems.invoiceId, invoiceId))
   await db
     .delete(invoices)
-    .where(and(eq(invoices.id, invoiceId), eq(invoices.userId, userId)))
+    .where(and(eq(invoices.id, invoiceId)))
   revalidatePath('/invoices')
 }
