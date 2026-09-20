@@ -22,6 +22,8 @@ import { getInvoices, getInvoiceById } from '@/app/actions/invoices'
 import { getServiceNumberMap } from '@/lib/db/service-number'
 import { generateInvoiceHTML } from '@/lib/invoice-template'
 import { downloadInvoicePDF } from '@/lib/invoice-downloader'
+import { getMyRole } from '@/lib/get-role'
+import { type Role } from '@/lib/auth-helpers'
 
 export type ServiceRecord = {
   id: number;
@@ -169,6 +171,14 @@ export default function CustomersPage() {
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null)
   const [permissionError, setPermissionError] = useState<string | null>(null)
+  const [myRole, setMyRole] = useState<Role | null>(null)
+
+  useEffect(() => {
+    loadCustomers()
+    loadGlobalInvoiceData()
+    getMyRole().then(setMyRole)
+  }, [])
+  const canEdit = myRole === 'admin' || myRole ==='super_admin'
 
   const [formData, setFormData] = useState({
     name: '',
@@ -558,6 +568,7 @@ export default function CustomersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {canEdit && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -568,6 +579,8 @@ export default function CustomersPage() {
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
+                          )}
+                          {canEdit && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -578,7 +591,9 @@ export default function CustomersPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          )}
                         </div>
+                        <PermissionWarning message={permissionError} />
                       </div>
                     ))}
                   </div>
