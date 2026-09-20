@@ -17,11 +17,11 @@ export default async function Dashboard() {
   const userId = session.user.id
 
   const [partsList, servicesList, customersList, invoicesList, serviceRecordsList] = await Promise.all([
-    db.select().from(parts).where(eq(parts.userId, userId)),
-    db.select().from(services).where(eq(services.userId, userId)),
-    db.select().from(customers).where(eq(customers.userId, userId)),
-    db.select().from(invoices).where(eq(invoices.userId, userId)),
-    db.select().from(serviceRecords).where(eq(serviceRecords.userId, userId)),
+    db.select().from(parts),
+    db.select().from(services),
+    db.select().from(customers),
+    db.select().from(invoices),
+    db.select().from(serviceRecords),
   ])
 
   const lowStockParts = partsList.filter(
